@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>行业分析工作台</title>
+<style>
+  :root{
+    --bg:#f4f1ea; --paper:#fffdf8; --card:#ffffff; --ink:#2b2b28; --muted:#6b6b63;
+    --line:#e3ddd0; --accent:#2e8b57; --accent-soft:#e7f3ec; --code-bg:#f1ede4;
+    --quote:#f0ece2; --table-head:#f3efe6; --shadow:0 1px 3px rgba(0,0,0,.08),0 6px 18px rgba(0,0,0,.05);
+    --err:#c0392b;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#16181a; --paper:#1c1f22; --card:#212529; --ink:#e8e6e1; --muted:#9aa0a6;
+      --line:#33383d; --accent:#4caf7d; --accent-soft:#1d2b24; --code-bg:#2a2f33;
+      --quote:#262b2f; --table-head:#262b2f; --shadow:0 1px 3px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3);
+      --err:#ff6b5e;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    line-height:1.65; font-size:15px;
+  }
+  .topbar{
+    position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+    padding:10px 16px; background:var(--paper); border-bottom:1px solid var(--line);
+    box-shadow:0 1px 6px rgba(0,0,0,.05);
+  }
+  .brand{font-weight:700; color:var(--accent); margin-right:6px; white-space:nowrap;}
+  .industry-input{
+    flex:1 1 260px; min-width:200px; padding:8px 11px; border:1px solid var(--line);
+    border-radius:8px; background:var(--card); color:var(--ink); font-size:14px;
+  }
+  .btn{
+    padding:8px 13px; border:1px solid var(--line); border-radius:8px; background:var(--card);
+    color:var(--ink); cursor:pointer; font-size:14px; transition:.15s;
+  }
+  .btn:hover{border-color:var(--accent);}
+  .btn.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .btn.primary:hover{filter:brightness(1.05);}
+  .btn:disabled{opacity:.45; cursor:not-allowed;}
+  .btn.retry-btn{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:600;}
+  .token{
+    margin-left:auto; font-size:12.5px; color:var(--muted); white-space:nowrap;
+    background:var(--accent-soft); padding:5px 10px; border-radius:20px;
+  }
+  main{padding:18px 16px 80px; max-width:920px; margin:0 auto;}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    box-shadow:var(--shadow); margin-bottom:18px; overflow:hidden;
+  }
+  .card-head{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:12px 16px; border-bottom:1px solid var(--line); background:var(--paper);
+  }
+  .card-title{font-weight:700; font-size:15.5px;}
+  .card-status{font-size:12.5px; color:var(--muted); display:flex; align-items:center;}
+  .card-status .dot{
+    display:none; width:8px; height:8px; border-radius:50%; background:var(--accent);
+    margin-right:6px; animation:blink 1s infinite;
+  }
+  .card-status.running .dot{display:inline-block;}
+  .card-status.error .stext{color:var(--err); font-weight:600;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+  .card-body{padding:14px 18px; overflow-x:auto;}
+  .card-body h1,.card-body h2,.card-body h3,.card-body h4{margin:.6em 0 .4em; line-height:1.3;}
+  .card-body h1{font-size:1.5em;} .card-body h2{font-size:1.3em; color:var(--accent);}
+  .card-body h3{font-size:1.12em;} .card-body h4{font-size:1.02em;}
+  .card-body p{margin:.5em 0;}
+  .card-body ul,.card-body ol{margin:.4em 0; padding-left:1.5em;}
+  .card-body li{margin:.25em 0;}
+  .card-body code{background:var(--code-bg); padding:1.5px 5px; border-radius:5px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.9em;}
+  .card-body pre{background:var(--code-bg); padding:12px 14px; border-radius:8px; overflow-x:auto;}
+  .card-body pre code{background:none; padding:0;}
+  .card-body blockquote{margin:.5em 0; padding:.4em 12px; border-left:4px solid var(--accent); background:var(--quote); border-radius:0 6px 6px 0; color:var(--muted);}
+  .card-body hr{border:none; border-top:1px solid var(--line); margin:1em 0;}
+  .card-body a{color:var(--accent); text-decoration:underline;}
+  .tbl-wrap{overflow-x:auto; margin:.6em 0;}
+  .card-body table{border-collapse:collapse; min-width:100%; font-size:13.5px;}
+  .card-body th,.card-body td{border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top;}
+  .card-body th{background:var(--table-head); font-weight:600;}
+  .card-footer{padding:10px 16px 14px; border-top:1px solid var(--line); background:var(--paper);}
+  .sel-hint{font-size:13.5px; color:var(--muted); margin-bottom:8px;}
+  .btn-row{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;}
+  .candidate-btn{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:600;}
+  .custom-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .custom-input{flex:1 1 240px; min-width:180px; padding:8px 11px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--ink);}
+  .chat-row{display:flex; gap:8px;}
+  .chat-input{flex:1 1 300px; min-width:200px; padding:8px 11px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--ink);}
+  .round-ctrl{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px; padding:8px 12px; background:var(--accent-soft); border:1px solid var(--accent); border-radius:8px; font-size:13px; color:var(--accent);}
+  .round-lbl{font-weight:600;}
+  .round-input{width:62px; padding:5px 8px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--ink); font-size:13px; text-align:center;}
+  .round-cur{margin-left:2px; opacity:.85;}
+  /* settings */
+  .settings{position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50; display:flex; align-items:center; justify-content:center; padding:16px;}
+  .settings.hidden{display:none;}
+  .settings-inner{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px; width:100%; max-width:460px; box-shadow:var(--shadow); max-height:90vh; overflow-y:auto;}
+  .settings-inner h2{margin:0 0 14px; font-size:18px; color:var(--accent);}
+  .settings-inner label{display:block; font-size:13px; color:var(--muted); margin:12px 0 4px;}
+  .settings-inner input[type=text],.settings-inner input[type=password],.settings-inner select{
+    width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); font-size:14px;
+  }
+  .settings-inner .check{display:flex; align-items:center; gap:8px; color:var(--ink); font-size:14px;}
+  .settings-inner .check input{width:auto;}
+  .settings-actions{display:flex; gap:8px; margin-top:18px;}
+  .settings-inner .note{font-size:12px; color:var(--muted); margin-top:14px; line-height:1.5;}
+  /* toast */
+  #toasts{position:fixed; top:64px; left:50%; transform:translateX(-50%); z-index:80; display:flex; flex-direction:column; gap:8px; align-items:center;}
+  .toast{background:var(--ink); color:var(--paper); padding:9px 16px; border-radius:8px; font-size:13.5px; opacity:0; transition:.3s; box-shadow:var(--shadow);}
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <span class="brand">行业分析工作台</span>
+  <input id="industryInput" class="industry-input" placeholder="输入行业名称，如：跨境电商 / 社区团购 / 工业软件…">
+  <button id="startBtn" class="btn primary">开始分析</button>
+  <button id="stopBtn" class="btn" disabled>停止</button>
+  <button id="exportBtn" class="btn">导出 .md</button>
+  <button id="settingsBtn" class="btn">⚙ 设置</button>
+  <span id="tokenDisplay" class="token">输入 0 · 输出 0</span>
+</header>
+
+<div id="settings" class="settings hidden">
+  <div class="settings-inner">
+    <h2>设置</h2>
+    <label>API 地址（自动清理尾部斜杠，自动拼 /v1/messages）
+      <input id="cfgBaseUrl" type="text" placeholder="https://api.anthropic.com">
+    </label>
+    <label>API Key（仅存本地浏览器 localStorage）
+      <input id="cfgApiKey" type="password" placeholder="sk-... 或三方平台的 key">
+    </label>
+    <label>模型 ID（自由输入，三方常用 anthropic/claude-opus-5 这类前缀）
+      <input id="cfgModel" type="text" list="modelList" placeholder="deepseek-v4-pro">
+      <datalist id="modelList">
+        <option value="deepseek-v4-pro">
+        <option value="anthropic/claude-opus-5">
+        <option value="anthropic/claude-sonnet-4-5">
+        <option value="anthropic/claude-3-5-sonnet">
+        <option value="openai/gpt-5">
+        <option value="google/gemini-2.5-pro">
+        <option value="qwen-max">
+        <option value="moonshot/kimi-k2">
+      </datalist>
+    </label>
+    <label>认证方式
+      <select id="cfgAuth">
+        <option value="auto">自动（官方 x-api-key / 三方 Bearer）</option>
+        <option value="xapikey">强制 x-api-key</option>
+        <option value="bearer">强制 Bearer</option>
+      </select>
+    </label>
+    <label class="check"><input id="cfgWeb" type="checkbox"> 联网核实（开启后模型可用 web_search，A 档字段会先检索核实）</label>
+    <label class="check"><input id="cfgProxy" type="checkbox" checked> 使用本地代理（解决浏览器 CORS 跨域拦截。需先启动 server.py，关闭后直连上游——仅官方 Anthropic 或支持 CORS 的网关可用）</label>
+    <label>从业者拷问轮数
+      <input id="cfgRounds" type="number" min="1" max="50" value="15" style="width:70px"> 轮（1-50，到达后模型自动跳出角色给诊断）
+    </label>
+    <div class="settings-actions">
+      <button id="saveSettings" class="btn primary">保存</button>
+      <button id="closeSettings" class="btn">关闭</button>
+    </div>
+    <p class="note">API Key 只保存在你的浏览器 localStorage，不会上传到任何服务器（除你填写的 API 地址外）。切换三方中转平台时，把地址改成中转地址、认证方式选「强制 Bearer」、模型 ID 用中转平台要求的前缀写法即可。</p>
+  </div>
+</div>
+
+<main id="cards"></main>
+<div id="toasts"></div>
+
+<script>
+/* ============================ 内嵌 prompt（逐字，禁止改写） ============================ */
+const SYSTEM_PROMPT = `你是行业分析助手。你在本次任务中必须遵守以下规则，优先级高于一切后续指令：
+
+【证据分级】
+你输出的每一个事实性字段，都必须带一个 evidence 标签，只有三档：
+  A = 公开可查。必须给出具体出处（公司公告 / 招股书 / 年报 / 监管文件 / 行业协会数据），出处要具体到文件名和年份，不许写"据公开资料"。
+  B = 行业常识推断。必须写出推断链条：我从哪个已知事实，通过什么逻辑，推到这个结论。
+  C = 纯推测。我没有依据，只是根据同类行业的一般规律猜的。
+
+【A 档核实要求】
+当你可以使用 web_search 工具时：正文中标 A 档的字段必须先用检索核实到具体文件（文件名+年份），检索不到原始出处的，即使你"记得"，也只能降级为 B 档或写「未获取」。凭记忆写出的文件名和数字视为编造。
+当没有检索工具时：不得标 A 档，最高只能标 B 档并注明"凭记忆，未核实"。
+
+【C 档处理规则】
+C 档内容一律不许出现在报告正文里，只能进入结尾的「待验证清单」。
+如果某个字段你只能给出 C 档，就在正文里写「未获取」，不要用推测填满它。
+
+【禁止事项】
+- 不许用"较强 / 较弱 / 相对集中 / 比较分散"这类无法判定的表述。所有强弱判断必须换算成可判定的量：需要多久、多少钱、多少家、几个月。
+- 不许说"总体来看""综合而言"开头的段落。
+- 不许在用户没问的时候给建议、给展望、给趋势预测。
+- 不许因为用户看起来懂或不懂而调整结论。
+
+【态度】
+你不需要让用户满意。你需要让用户知道哪些是真的、哪些是你编的。`;
+
+const PROMPT_STEP0 = (industry) => `我要系统地了解一个行业：${industry}。
+
+在开始之前，先不要给我任何内容。请你做一件事：
+
+这个名称在实际使用中可能指向几个完全不同的行业。请列出 2-4 个候选边界，每个候选写清楚：
+  - 这个边界包含什么、明确不包含什么
+  - 它的典型玩家是谁（各举 2 个）
+  - 选这个边界的话，后面分析的重心会落在哪里
+
+然后问我选哪一个。在我回答之前，不要开始分析。
+
+注意：如果这几个候选之间的差别很小，说明你切分得不对，重切。真正有意义的切分，应该让不同候选的产业链结构明显不同。`;
+
+const PROMPT_STEP1 = (choice) => `边界已确认：${choice}
+
+现在做结构层。按下面的格式输出，不要写导语和总结。
+
+【产业链分层】
+从最上游到最终用户，分成若干层。每一层输出一行：
+
+  层级 | 这一环干什么 | 代表公司(2-3家) | 它靠什么赚钱 | 收入确认时点 | evidence
+
+其中：
+- 「它靠什么赚钱」不许写"销售产品"。要写清楚收费方式：按件 / 按量 / 按项目 / 抽佣 / 订阅 / 赚差价 / 赚账期 / 赚返点，以及向谁收（很多行业里，付钱的人和用东西的人不是同一个）。
+- 「收入确认时点」写：签约时 / 发货时 / 验收时 / 回款时 / 分期。这一栏后面会用到，不许留空，不知道就写「未获取」。
+
+【这条链的特殊之处】
+和一般制造业/服务业的标准链条比，这条链多了哪一环、少了哪一环、或者哪一环的位置不一样？只写差异，不写共性。
+
+【我可能画错的地方】
+你在分层时做了哪 3 个判断是可能错的？逐条列出。`;
+
+const PROMPT_STEP2 = () => `基于上面的产业链，现在拆三条流转链。三条分开输出，不要合并。
+
+【钱流】
+从最终用户付出的 100 元开始，追踪它依次经过哪些环节。每一跳一行：
+
+  从谁 → 到谁 | 这一跳留下多少(%) | 账期多长 | 谁先垫钱 | evidence
+
+  账期和垫资这两栏是重点。如果不知道，写「未获取」并列入待验证清单，绝对不许用行业平均值或者常识填充。
+
+【货流 / 服务交付流】
+东西（或服务）实际怎么从生产端到达用户端。每一跳一行：
+
+  从哪 → 到哪 | 谁掌握控制权 | 谁承担损耗和退货 | 时间多久 | evidence
+
+  注意：货流和钱流的路径经常不一致（比如经销商不碰货只走账，或者平台碰货不碰账）。如果这条链和钱流路径不同，明确指出不同在哪。
+
+【用户流】
+用户是怎么被找到、被转化、被留住的。
+
+  获客渠道 | 决策者是谁 | 付钱的是谁 | 使用的是谁 | 复购触发条件 | evidence
+
+  「决策者 / 付钱的 / 使用的」三者是否分离，是这个行业的一个关键特征，必须明确回答是或否。
+
+【三条链的错位】
+三条链在哪一环出现了错位（控制权、资金、使用权不在同一方手里）？错位的地方通常就是这个行业的矛盾和机会所在，逐条指出。`;
+
+const PROMPT_STEP3 = () => `现在分析议价能力。
+
+严格禁止使用以下表述：议价能力较强 / 较弱 / 相对集中 / 比较分散 / 处于优势地位 / 话语权较大。这些说法对任何行业都成立，等于没说。
+
+对下面五个问题逐一作答，每个问题的答案必须是一个可以被验证的量。
+
+1. 供应商议价
+   问：如果现在要换掉这条链上最大的那个供应商，需要多久？成本上升多少？有几家可替代的？换供应商需要重新认证/备案吗？
+   → 答案里必须出现具体的时间或金额。答不出来写「未获取」。
+
+2. 客户议价
+   问：客户从这一环切换到竞争对手，具体要付出什么代价？（合同违约金 / 数据迁移 / 重新培训 / 库存作废 / 关系重建 / 无代价）
+   → 如果答案是"基本无代价"，那这一环的议价权就是零，直接这么写。
+
+3. 替代品威胁
+   问：这个行业的需求，上一次被另一种形态吃掉是什么时候？吃掉了多少？现在有没有正在发生的同类事情？
+   → 要具体事件，不要"随着技术发展可能被替代"这种话。
+
+4. 新进入者
+   问：挡住新人的到底是什么？在下面几项里点名，不许全选：
+   牌照/资质 | 起步资本量 | 渠道关系 | 手艺和经验 | 数据积累 | 规模成本 | 品牌信任 | 几乎没有壁垒
+   → 点名之后回答：一个有钱有人的新玩家，从零到能接单要多久？
+
+5. 同业竞争
+   问：现有玩家是在同一个维度上打，还是分层错开？最近三年发生过几次价格战？由谁发起？结果如何？
+   → 如果分层，说明分层的依据是什么（客户规模/地域/品类/服务深度）。
+
+【综合结论】
+在这条产业链上，利润最终沉淀在哪一环？为什么是这一环而不是别的？用上面五个答案来论证，不许引入新的理由。
+
+【最脆弱的一环】
+哪一环的议价权最容易在未来两年内被削弱？触发条件是什么？标注 evidence，如果是 C 档就明说这是推测。`;
+
+const PROMPT_STEP4 = () => `最后一层。注意：这一层的规则和前面三层完全不同。
+
+这三类信息在公开资料里极少存在，你大概率不知道。因此本步骤中：
+- 你不许输出结论
+- 你只许输出「我猜是这样」+「怎么验证」+「该问谁」
+- 每一条都默认是 C 档，不需要标 evidence，但必须写清楚验证方法
+
+【约束｜这个行业不能做的事】
+分三类，每类给 3-5 条假设：
+  法规约束：牌照、审批、准入、强制标准、监管红线
+  物理约束：保质期、温控、运输半径、产能爬坡时间、设备切换成本
+  习惯约束：账期惯例、返点潜规则、渠道保护、不能越过的关系
+
+  格式：假设 | 如果这条成立会导致什么 | 怎么验证 | 该问谁
+
+  重点：外行提出的蠢建议，几乎全部是撞在某条约束上，而且提出时完全不知道那条线存在。请你尽量列出那些"外行不会想到"的约束。
+
+【节奏｜这个行业按什么周期运转】
+  旺淡季在什么时候？| 客户的预算审批窗口？| 决策周期多长？| 库存周转天数？| 什么时候找客户是白费力气？
+
+  格式同上：假设 | 影响 | 怎么验证 | 该问谁
+
+  重点：外行最典型的失败不是做错事，是在错误的时间点做正确的事。
+
+【异常｜看到什么意味着出事了】
+  列出 8-10 个"数据组合"，每个说明它可能意味着什么。写成问句形式：「如果我看到 X 和 Y 同时发生，这在你们行业里通常意味着什么？」这些问句就是我要去问内行的清单。
+
+【结尾必须输出：你还不知道的 10 件事】
+这份报告读完之后，我最可能产生的错觉是什么？明确列出 10 件"这份报告没有回答、但对判断这个行业很关键"的事。
+
+这一屏是整个任务里最重要的部分。不要客气，不要为了让报告显得完整而缩短这个清单。`;
+
+const PROMPT_STEP5 = () => `上面是我们一起做出的行业分析。现在切换角色。
+
+你是一位在这个行业干了 12 年的从业者。我是一个刚接触这个行业、读了一些资料就来找你聊的人。
+
+你的行为规则（优先级高于一切）：
+1. 全程保持这个角色，不要跳出来解释你是 AI。
+2. 禁止使用以下表达：很好的问题 / 你说得对 / 思路清晰 / 有道理 / 你已经抓住了重点。一次都不许出现。
+3. 你的提问必须集中攻击上面报告里 evidence 为 B 和 C 的字段，以及「未获取」的那些栏。哪里心虚就问哪里。
+4. 当我的回答里出现外行痕迹时，直接打断，指出是哪个词、哪个假设不对。不要等我说完，也不要先肯定再否定。
+5. 一次只说 3 句话以内，像真人对话。
+
+【关于对话轮数——由我来控场，你不要自己数】
+我们来进行多轮问答，每一轮由我先提问、你回答。
+你只管保持角色、继续提问；不要自己计算已经进行到第几轮，也不要主动结束对话。
+只有在收到我单独发来的一句指令「【请结束对话并给出诊断】」时，你才跳出角色、给出下面的诊断。在那之前，绝不要输出诊断。
+
+【诊断内容（仅当收到上面的结束指令时输出）】
+跳出角色，给我一份诊断：
+  - 这份报告里哪几栏其实是空的，只是看起来被填满了
+  - 我哪几处用词暴露了我是外行（原句 + 内行会怎么说）
+  - 如果我只能再补 3 块知识，应该补哪 3 块
+  - 你还不知道的 10 件事：这份报告没有回答、但对判断这个行业很关键的事（不要客气，列满 10 件）
+
+现在由你先开口，提出第一个问题。`;
+
+const STEP_DEFS = {
+  step0: {title:'Step 0 · 边界切分'},
+  step1: {title:'Step 1 · 结构层'},
+  step2: {title:'Step 2 · 三条流转链'},
+  step3: {title:'Step 3 · 议价能力'},
+  step4: {title:'Step 4 · 约束/节奏/异常'},
+  step5: {title:'Step 5 · 从业者拷问'},
+};
+
+/* ============================ 状态 ============================ */
+const state = {
+  config: {baseUrl:'https://aigw.yuexiuproperty.cn/bailian/v1', apiKey:'sk-h7VVqSO_ESa6aBEhRNmVTJwXGF_imSHI', model:'deepseek-v4-pro', authMode:'auto', webSearch:false, useProxy:true, chatRounds:15},
+  conversation: [],     // 仅 user / assistant 消息（system 单独传）
+  selectedChoice: '',
+  industry: '',
+  abortController: null,
+  aborted: false,
+  runId: 0,
+  tokens: {input:0, output:0, cacheRead:0, cacheWrite:0},
+  webSearchDowngraded: false,
+  pipelineSteps: null,
+  cards: {},
+  cardOrder: [],
+};
+
+/* ============================ 工具函数 ============================ */
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function cleanBaseUrl(u){ return (u||'').trim().replace(/\/+$/,''); }
+function isOfficialUrl(u){ return cleanBaseUrl(u) === 'https://api.anthropic.com'; }
+/* 把用户填写的任意形式地址解析成最终的 /v1/messages 端点。
+   支持：官方根地址、已带 /v1/messages、OpenAI 风格 /chat/completions、任意 base（避免 /v1 重复）。 */
+function resolveMessagesUrl(raw){
+  let u = (raw||'').trim().replace(/\/+$/,'');
+  if(!u) u = 'https://api.anthropic.com';
+  if(/\/v1\/messages$/.test(u)) return u;                          // 已是完整端点
+  if(/\/chat\/completions$/.test(u)) u = u.replace(/\/chat\/completions$/,''); // OpenAI 风格 -> 去掉
+  if(/\/messages$/.test(u)) u = u.replace(/\/messages$/,'');       // 去掉尾部 /messages
+  if(!/\/v1$/.test(u)) u += '/v1';                                 // 避免 /v1 重复
+  return u + '/messages';
+}
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function inline(s){
+  s = escapeHtml(s);
+  s = s.replace(/`([^`]+)`/g, (m,c)=>'<code>'+c+'</code>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/(^|[^*])\*([^*\s][^*]*?)\*/g, '$1<em>$2</em>');
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m,t,u)=>{
+    const safe = u.replace(/"/g,'%22').replace(/</g,'%3C');
+    return '<a href="'+safe+'" target="_blank" rel="noopener">'+t+'</a>';
+  });
+  return s;
+}
+
+function splitTableRow(line){
+  let s = line.trim();
+  if (s.startsWith('|')) s = s.slice(1);
+  if (s.endsWith('|')) s = s.slice(0,-1);
+  return s.split('|').map(c=>c.trim());
+}
+
+/* 轻量 Markdown 渲染器：先转义，再处理。重点：表格 / 有序列表保号 */
+function mdToHtml(src){
+  if(!src) return '';
+  const lines = src.replace(/\r\n/g,'\n').split('\n');
+  let out = '';
+  let i = 0;
+  let para = [];
+  let listType = null;            // 'ul' | 'ol'
+  let listItems = [];            // ul: [html]; ol: [{n, html}]
+  let codeOpen = false, codeLang = '', codeBuf = [];
+  let quote = [];
+  let table = null;              // {head:[], rows:[[]]}
+
+  function flushPara(){ if(para.length){ out += '<p>'+inline(para.join(' '))+'</p>'; para=[]; } }
+  function flushList(){
+    if(!listType) return;
+    if(listType==='ul'){ out += '<ul>'+listItems.map(x=>'<li>'+x+'</li>').join('')+'</ul>'; }
+    else { out += '<ol>'+listItems.map(x=>'<li value="'+x.n+'">'+x.html+'</li>').join('')+'</ol>'; }
+    listType=null; listItems=[];
+  }
+  function flushQuote(){ if(quote.length){ out += '<blockquote>'+inline(quote.join(' '))+'</blockquote>'; quote=[]; } }
+  function flushTable(){
+    if(table){
+      const h = '<thead><tr>'+table.head.map(c=>'<th>'+inline(c)+'</th>').join('')+'</tr></thead>';
+      const b = '<tbody>'+table.rows.map(r=>'<tr>'+r.map(c=>'<td>'+inline(c)+'</td>').join('')+'</tr>').join('')+'</tbody>';
+      out += '<div class="tbl-wrap"><table>'+h+b+'</table></div>';
+      table=null;
+    }
+  }
+  function flushAll(){ flushPara(); flushList(); flushQuote(); flushTable(); }
+
+  while(i < lines.length){
+    const line = lines[i];
+    const fence = line.match(/^(\s*)(`{3,}|~{3,})\s*([\w-]*)\s*$/);
+    if(fence){
+      if(!codeOpen){ flushAll(); codeOpen=true; codeLang=fence[3]||''; codeBuf=[]; }
+      else { out += '<pre><code'+(codeLang?' class="lang-'+codeLang+'"':'')+'>'+escapeHtml(codeBuf.join('\n'))+'</code></pre>'; codeOpen=false; codeBuf=[]; }
+      i++; continue;
+    }
+    if(codeOpen){ codeBuf.push(line); i++; continue; }
+    if(/^\s*$/.test(line)){ flushAll(); i++; continue; }
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    if(h){ flushAll(); const lvl=h[1].length; out += '<h'+lvl+'>'+inline(h[2])+'</h'+lvl+'>'; i++; continue; }
+    if(/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)){ flushAll(); out += '<hr>'; i++; continue; }
+    // 表格：当前行含 |，下一行是分隔行
+    if(line.indexOf('|')>=0 && i+1<lines.length && /^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i+1]) && lines[i+1].indexOf('-')>=0){
+      flushAll();
+      const head = splitTableRow(line);
+      i += 2;
+      const rows = [];
+      while(i<lines.length && lines[i].indexOf('|')>=0 && !/^\s*$/.test(lines[i])){ rows.push(splitTableRow(lines[i])); i++; }
+      table = {head, rows};
+      flushTable();
+      continue;
+    }
+    const q = line.match(/^\s*>\s?(.*)$/);
+    if(q){ flushPara(); flushList(); quote.push(q[1]); i++; continue; }
+    const ul = line.match(/^\s*[-*+]\s+(.*)$/);
+    if(ul){ flushPara(); flushQuote(); flushTable(); if(listType==='ol') flushList(); listType='ul'; listItems.push(inline(ul[1])); i++; continue; }
+    const ol = line.match(/^\s*(\d+)\s*[\.、]\s+(.*)$/);
+    if(ol){
+      flushPara(); flushQuote(); flushTable();
+      if(listType===null) listType='ol';
+      else if(listType==='ul'){ flushList(); listType='ol'; }
+      listItems.push({n:parseInt(ol[1],10), html:inline(ol[2])});
+      i++; continue;
+    }
+    flushList(); flushQuote(); flushTable();
+    para.push(line.trim()); i++;
+  }
+  flushAll();
+  if(codeOpen){ out += '<pre><code>'+escapeHtml(codeBuf.join('\n'))+'</code></pre>'; }
+  return out;
+}
+
+function assistantText(a){ return (a.content||[]).filter(b=>b.type==='text').map(b=>b.text||'').join(''); }
+function stepAllText(card){ return (card._stepAssistants||[]).map(assistantText).join('\n\n'); }
+function renderChatRaw(card){
+  return (card.turns||[]).map(t => t.role==='user' ? '> '+t.text.replace(/\n/g,'\n> ') : t.text).join('\n\n');
+}
+function getExportRaw(card){
+  if(card.isStep5) return renderChatRaw(card);
+  return card.raw || '';
+}
+
+/* ============================ 配置读写 ============================ */
+function loadConfig(){
+  let c = {};
+  try{ c = JSON.parse(localStorage.getItem('iaw_config')||'{}'); }catch(e){}
+  state.config = Object.assign({baseUrl:'https://aigw.yuexiuproperty.cn/bailian/v1', apiKey:'sk-h7VVqSO_ESa6aBEhRNmVTJwXGF_imSHI', model:'deepseek-v4-pro', authMode:'auto', webSearch:false, useProxy:true, chatRounds:15}, c);
+}
+function saveConfig(){ localStorage.setItem('iaw_config', JSON.stringify(state.config)); }
+
+/* ============================ 请求构建 ============================ */
+function buildHeaders(){
+  const cfg = state.config;
+  const isOfficial = isOfficialUrl(cfg.baseUrl);
+  const h = {'content-type':'application/json', 'anthropic-version':'2023-06-01'};
+  let mode = cfg.authMode;
+  if(mode==='auto') mode = isOfficial ? 'xapikey' : 'bearer';
+  if(mode==='xapikey') h['x-api-key'] = cfg.apiKey;
+  else h['Authorization'] = 'Bearer ' + cfg.apiKey;
+  if(isOfficial){
+    h['anthropic-dangerous-direct-browser-access'] = 'true';
+    h['anthropic-beta'] = 'server-side-fallback-2026-07-01';
+  }
+  return h;
+}
+function buildBody(stripped){
+  const cfg = state.config;
+  const isOfficial = isOfficialUrl(cfg.baseUrl);
+  const system = [{type:'text', text:SYSTEM_PROMPT}];
+  if(!stripped.cache_control) system[0].cache_control = {type:'ephemeral'};
+  const body = {
+    model: cfg.model || 'deepseek-v4-pro',
+    max_tokens: 64000,
+    stream: true,
+    system,
+    messages: state.conversation
+  };
+  if(!stripped.fallbacks && isOfficial) body.fallbacks = 'default';
+  if(!stripped.tools && cfg.webSearch) body.tools = [{type:'web_search_20260209', name:'web_search', max_uses:12}];
+  return body;
+}
+
+/* ============================ SSE 单次请求 ============================ */
+async function sendOneRequest(body, card, assistant){
+  const cfg = state.config;
+  let url, fetchOpts;
+  if(cfg.useProxy){
+    /* 代理模式：POST 到同源 /api/proxy，上游地址和 key 嵌入 body */
+    url = '/api/proxy';
+    body.__baseUrl = cfg.baseUrl;
+    body.__apiKey  = cfg.apiKey;
+    fetchOpts = {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), signal:state.abortController.signal};
+  } else {
+    /* 直连模式：直接请求上游（仅官方 Anthropic 或支持 CORS 的网关可用） */
+    url = resolveMessagesUrl(cfg.baseUrl);
+    fetchOpts = {method:'POST', headers:buildHeaders(), body:JSON.stringify(body), signal:state.abortController.signal};
+  }
+  const resp = await fetch(url, fetchOpts);
+  if(!resp.ok){
+    let txt = ''; try{ txt = await resp.text(); }catch(e){}
+    let parsed = {}; try{ parsed = JSON.parse(txt); }catch(e){}
+    const msg = (parsed.error && parsed.error.message) || txt || ('HTTP '+resp.status);
+    if(resp.status === 400){
+      const m = msg.toLowerCase();
+      if(/fallback/.test(m)) throw {type:'param400', param:'fallbacks', message:msg};
+      if(/cache[_\s]?control/.test(m)) throw {type:'param400', param:'cache_control', message:msg};
+      if(/web_search|\btools?\b/.test(m)) throw {type:'param400', param:'tools', message:msg};
+      throw {type:'http', status:400, retryable:false, message:msg};
+    }
+    const retryable = resp.status>=500 || resp.status===529 || resp.status===429;
+    throw {type:'http', status:resp.status, retryable, message:msg};
+  }
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let rafPending = false, needsRender = false;
+  const scheduleRender = ()=>{ if(!rafPending){ rafPending=true; requestAnimationFrame(()=>{ rafPending=false; if(needsRender){ renderCard(card); needsRender=false; } }); } };
+  let stopReason = null;
+
+  while(true){
+    const {done, value} = await reader.read();
+    if(done) break;
+    buffer += decoder.decode(value, {stream:true});
+    let idx;
+    while((idx = buffer.indexOf('\n\n')) >= 0){
+      const chunk = buffer.slice(0, idx);
+      buffer = buffer.slice(idx+2);
+      const dataLine = chunk.split('\n').find(l => l.startsWith('data:'));
+      if(!dataLine) continue;
+      const dataStr = dataLine.slice(5).trim();
+      if(!dataStr) continue;
+      let evt; try{ evt = JSON.parse(dataStr); }catch(e){ continue; }
+      const r = handleSSEEvent(evt, card, assistant);
+      if(r && r.stopReason) stopReason = r.stopReason;
+      if(r && r.error) throw {type:'stream-error', retryable:true, message:r.error};
+      needsRender = true;
+    }
+    scheduleRender();
+  }
+  scheduleRender();
+  return {stopReason: stopReason || 'end_turn'};
+}
+
+function handleSSEEvent(evt, card, assistant){
+  switch(evt.type){
+    case 'message_start': {
+      const u = (evt.message && evt.message.usage) || {};
+      state.tokens.input += u.input_tokens || 0;
+      state.tokens.cacheRead += u.cache_read_input_tokens || 0;
+      state.tokens.cacheWrite += u.cache_creation_input_tokens || 0;
+      updateTokenDisplay();
+      break;
+    }
+    case 'content_block_start': {
+      const cb = evt.content_block;
+      const block = JSON.parse(JSON.stringify(cb)); // 深拷贝
+      if(block.type==='text') block.text = '';
+      else if(block.type==='thinking'){ block.thinking=''; block.signature=''; }
+      else if(block.type==='tool_use' || block.type==='server_tool_use'){ block.partial_json=''; block.input={}; }
+      const ind = (typeof evt.index==='number') ? evt.index : assistant.content.length;
+      assistant.content[ind] = block;
+      if(block.type==='server_tool_use'){
+        card.searchCount++;
+        setCardStatus(card, '检索中…（第 '+card.searchCount+' 次）', true);
+      }
+      break;
+    }
+    case 'content_block_delta': {
+      const block = assistant.content[evt.index];
+      if(!block) break;
+      const d = evt.delta;
+      if(d.type==='text_delta'){
+        block.text = (block.text||'') + d.text;
+        if(card.isStep5){ if(card._curTurn) card._curTurn.text += d.text; card.raw = renderChatRaw(card); }
+        else { card.raw = stepAllText(card); }
+      } else if(d.type==='thinking_delta'){
+        block.thinking = (block.thinking||'') + d.thinking;
+      } else if(d.type==='signature_delta'){
+        block.signature = (block.signature||'') + d.signature;
+      } else if(d.type==='input_json_delta'){
+        block.partial_json = (block.partial_json||'') + d.partial_json;
+      }
+      break;
+    }
+    case 'content_block_stop': {
+      const block = assistant.content[evt.index];
+      if(block && (block.type==='tool_use' || block.type==='server_tool_use')){
+        try{ block.input = JSON.parse(block.partial_json || '{}'); }catch(e){ block.input = {}; }
+        delete block.partial_json;
+      }
+      break;
+    }
+    case 'message_delta': {
+      const u = evt.usage || {};
+      if(u.input_tokens) state.tokens.input += u.input_tokens;        // 部分网关把输入 token 放在 message_delta
+      if(u.output_tokens){ state.tokens.output += u.output_tokens; updateTokenDisplay(); }
+      if(u.cache_read_input_tokens) state.tokens.cacheRead += u.cache_read_input_tokens;
+      if(u.cache_creation_input_tokens) state.tokens.cacheWrite += u.cache_creation_input_tokens;
+      if(evt.delta && evt.delta.stop_reason) return {stopReason: evt.delta.stop_reason};
+      break;
+    }
+    case 'message_stop': {
+      return {stopReason: 'end_turn'};
+    }
+    case 'error': {
+      return {error: (evt.error && evt.error.message) || 'stream error'};
+    }
+    case 'ping': break;
+  }
+  return {};
+}
+
+/* ============================ 一步流式执行（含 pause_turn / 重试 / 400 剥离） ============================ */
+async function streamStep(card, userContent, opts){
+  opts = opts || {};
+  const myRun = state.runId;
+  const convLenBefore = state.conversation.length;
+  state.conversation.push({role:'user', content:userContent});
+  if(card.isStep5 && !opts.skipUserTurnDisplay){
+    card.turns.push({role:'user', text:userContent});
+    card.raw = renderChatRaw(card); renderCard(card);
+  }
+  card._stepAssistants = card._stepAssistants || [];
+  let needNewAssistant = true;
+  let pauseCount = 0, attempts = 0;
+  const stripped = {};
+  let lastStop = null;
+
+  while(true){
+    const cardSnapshot = { raw: card.raw, searchCount: card.searchCount };
+    let assistant;
+    if(needNewAssistant){
+      assistant = {role:'assistant', content:[]};
+      state.conversation.push(assistant);
+      card._stepAssistants.push(assistant);
+      if(card.isStep5){ const t={role:'assistant', text:''}; card.turns.push(t); card._curTurn = t; }
+      needNewAssistant = false;
+    } else {
+      assistant = state.conversation[state.conversation.length-1];
+      assistant.content = [];
+      card.raw = cardSnapshot.raw;
+      card.searchCount = cardSnapshot.searchCount;
+      if(card.isStep5 && card._curTurn){ card._curTurn.text = ''; card.raw = renderChatRaw(card); }
+    }
+    const snapshot = { raw: card.raw, searchCount: card.searchCount };
+    const body = buildBody(stripped);
+    try{
+      const res = await sendOneRequest(body, card, assistant);
+      if(state.runId !== myRun){ state.conversation.length = convLenBefore; return lastStop; } // 被新分析取代
+      lastStop = res.stopReason;
+      if(lastStop === 'pause_turn'){
+        pauseCount++;
+        setCardStatus(card, '续传中…（第 '+pauseCount+' 次续传）', true);
+        if(pauseCount >= 10){ lastStop = 'end_turn'; break; }
+        needNewAssistant = true;
+        continue;
+      }
+      break;
+    } catch(e){
+      if(e.type === 'param400'){
+        const p = e.param;
+        if(stripped[p]){ state.conversation.length = convLenBefore; throw new Error('参数 '+p+' 已剥离但仍返回 400：'+(e.message||'')); }
+        stripped[p] = true;
+        if(p === 'tools'){ state.webSearchDowngraded = true; showWarning('该平台不支持检索工具，已降级（本步不再有 A 档）'); }
+        continue;
+      }
+      if(e.retryable && !state.aborted && attempts < 2){
+        attempts++;
+        needNewAssistant = false;
+        const waitMs = (e.status===429) ? 10000 : (attempts===1 ? 2500 : 5000);
+        setCardStatus(card, '断流，重试中…（第 '+attempts+' 次）', true);
+        await sleep(waitMs);
+        continue;
+      }
+      // 致命失败：清理本轮会话状态
+      state.conversation.length = convLenBefore;
+      if(state.aborted || e.name === 'AbortError'){ setCardStatus(card, '已停止', false, true); }
+      else if(e.type === 'http' && !e.retryable){ setCardStatus(card, '出错：HTTP '+e.status + (e.message ? (' · '+e.message) : ''), false, true); }
+      else { setCardStatus(card, '出错：' + (e.message || e.toString()), false, true); }
+      throw e;
+    }
+  }
+  // 收尾状态
+  if(lastStop === 'refusal') setCardStatus(card, '被安全分类器拒绝', false, true);
+  else if(lastStop === 'max_tokens') setCardStatus(card, '完成 · 检索'+card.searchCount+' 次（可能被截断）', false);
+  else setCardStatus(card, '完成' + (card.searchCount ? (' · 检索 '+card.searchCount+' 次') : ''), false);
+  renderCard(card);
+  return lastStop;
+}
+
+/* ============================ 卡片 UI ============================ */
+function createCard(title, key){
+  const el = document.createElement('div'); el.className = 'card';
+  const head = document.createElement('div'); head.className = 'card-head';
+  const t = document.createElement('span'); t.className = 'card-title'; t.textContent = title;
+  const status = document.createElement('span'); status.className = 'card-status';
+  const dot = document.createElement('span'); dot.className = 'dot';
+  const stext = document.createElement('span'); stext.className = 'stext'; stext.textContent = '等待中…';
+  status.appendChild(dot); status.appendChild(stext);
+  head.appendChild(t); head.appendChild(status);
+  const body = document.createElement('div'); body.className = 'card-body';
+  const footer = document.createElement('div'); footer.className = 'card-footer';
+  el.appendChild(head); el.appendChild(body); el.appendChild(footer);
+  document.getElementById('cards').appendChild(el);
+  const card = {
+    id: key || ('c'+Date.now()+Math.random().toString(36).slice(2)),
+    title, el, statusEl:status, stextEl:stext, bodyEl:body, footerEl:footer,
+    raw:'', searchCount:0, status:'', _stepAssistants:[]
+  };
+  if(key) state.cards[key] = card;
+  state.cards[card.id] = card;
+  state.cardOrder.push(card.id);
+  setCardStatus(card, '生成中…', true);
+  el.scrollIntoView({behavior:'smooth', block:'end'});
+  return card;
+}
+function setCardStatus(card, text, running, isError){
+  card.status = text; card.stextEl.textContent = text;
+  card.statusEl.classList.toggle('running', !!running);
+  card.statusEl.classList.toggle('error', !!isError);
+}
+function renderCard(card){ card.bodyEl.innerHTML = mdToHtml(card.raw || ''); }
+function clearCard(card){
+  card.raw = ''; card.searchCount = 0; card.status = ''; card._stepAssistants = [];
+  renderCard(card);
+  card.footerEl.querySelector('.retry-btn')?.remove();
+}
+function showRetryButton(card){
+  card.footerEl.querySelector('.retry-btn')?.remove();
+  const b = document.createElement('button'); b.className = 'btn retry-btn'; b.textContent = '重试本步并继续';
+  b.onclick = ()=>{ b.remove(); if(card.retryFn) card.retryFn(); };
+  card.footerEl.insertBefore(b, card.footerEl.firstChild);
+}
+
+/* ============================ 候选边界解析与选择 ============================ */
+function parseCandidates(text){
+  const lines = (text||'').split('\n');
+  const candRe = /^\s*(#{1,4}\s*)?(候选|边界)\s*([一二三四1-4A-Da-d])\b/;
+  const markers = [];
+  for(let i=0;i<lines.length;i++){ if(candRe.test(lines[i])) markers.push(i); }
+  let blocks = [];
+  if(markers.length >= 2){
+    for(let k=0;k<markers.length;k++){
+      const start = markers[k];
+      const end = (k+1<markers.length) ? markers[k+1] : lines.length;
+      blocks.push(lines.slice(start,end).join('\n').trim());
+    }
+  } else {
+    const numRe = /^\s*(#{1,4}\s*)?\d+\s*[\.、]/;
+    const nm = [];
+    for(let i=0;i<lines.length;i++){ if(numRe.test(lines[i])) nm.push(i); }
+    if(nm.length >= 2 && nm.length <= 6){
+      for(let k=0;k<nm.length;k++){
+        const start = nm[k];
+        const end = (k+1<nm.length) ? nm[k+1] : lines.length;
+        blocks.push(lines.slice(start,end).join('\n').trim());
+      }
+    }
+  }
+  if(blocks.length > 4) blocks = blocks.slice(0,4);
+  return blocks;
+}
+function showSelectionControls(card, cands){
+  const footer = card.footerEl;
+  footer.innerHTML = '';
+  const hint = document.createElement('div'); hint.className = 'sel-hint';
+  if(cands.length){
+    hint.textContent = '请选择一个候选边界开始分析：';
+    footer.appendChild(hint);
+    const btnRow = document.createElement('div'); btnRow.className = 'btn-row';
+    const cn = ['一','二','三','四'];
+    cands.forEach((c,idx)=>{
+      const b = document.createElement('button'); b.className = 'btn candidate-btn';
+      b.textContent = '候选'+cn[idx];
+      b.onclick = ()=> selectBoundary(c);
+      btnRow.appendChild(b);
+    });
+    footer.appendChild(btnRow);
+  } else {
+    hint.textContent = '未能自动识别候选边界，请直接输入你想要的边界（可交叉组合）：';
+    footer.appendChild(hint);
+  }
+  const row = document.createElement('div'); row.className = 'custom-row';
+  const inp = document.createElement('input'); inp.type='text'; inp.className='custom-input';
+  inp.placeholder = '自定义边界，支持交叉组合，回车确认';
+  inp.onkeydown = (e)=>{ if(e.key==='Enter'){ const v=inp.value.trim(); if(v) selectBoundary(v); } };
+  const ok = document.createElement('button'); ok.className='btn'; ok.textContent='确认边界';
+  ok.onclick = ()=>{ const v=inp.value.trim(); if(v) selectBoundary(v); };
+  row.appendChild(inp); row.appendChild(ok);
+  footer.appendChild(row);
+}
+function selectBoundary(choice){
+  state.selectedChoice = choice;
+  const c0 = state.cards['step0'];
+  if(c0) c0.footerEl.innerHTML = '';
+  runSteps1to4();
+}
+
+/* ============================ 流水线 ============================ */
+function runSteps1to4(){
+  const steps = state.pipelineSteps = [
+    {key:'step1', content:()=>PROMPT_STEP1(state.selectedChoice)},
+    {key:'step2', content:()=>PROMPT_STEP2()},
+    {key:'step3', content:()=>PROMPT_STEP3()},
+    {key:'step4', content:()=>PROMPT_STEP4()},
+  ];
+  (async()=>{
+    const myRun = state.runId;
+    for(let i=0;i<steps.length;i++){
+      if(state.aborted || state.runId !== myRun) break;
+      const def = steps[i];
+      const card = state.cards[def.key] || createCard(STEP_DEFS[def.key].title, def.key);
+      try{
+        await streamStep(card, def.content(), {});
+        if(state.runId !== myRun) return;
+      }catch(e){
+        setupRetry(card, def, i, steps);
+        return;
+      }
+    }
+    if(!state.aborted && state.runId === myRun) showStep5Entry();
+  })();
+}
+
+function setupRetry(card, def, index, pipelineSteps){
+  card.retryFn = makeRetry(card, def, index, pipelineSteps);
+  showRetryButton(card);
+}
+function makeRetry(card, def, index, pipelineSteps){
+  return async function(){
+    if(!state.config.apiKey){ openSettings(); return; }
+    state.aborted = false;
+    state.abortController = new AbortController();
+    updateStopButton();
+    clearCard(card);
+    const myRun = state.runId;
+    try{
+      await streamStep(card, def.content(), {});
+      if(state.runId !== myRun) return;
+      if(def.key === 'step0'){ showSelectionControls(card, parseCandidates(card.raw)); return; }
+      if(pipelineSteps){
+        for(let j=index+1;j<pipelineSteps.length;j++){
+          if(state.aborted || state.runId !== myRun) break;
+          const d = pipelineSteps[j];
+          const c = state.cards[d.key] || createCard(STEP_DEFS[d.key].title, d.key);
+          clearCard(c);
+          try{ await streamStep(c, d.content(), {}); }
+          catch(e){ setupRetry(c, d, j, pipelineSteps); return; }
+        }
+        if(!state.aborted && state.runId === myRun) showStep5Entry();
+      }
+    }catch(e){
+      setupRetry(card, def, index, pipelineSteps);
+    }
+  };
+}
+
+function showStep5Entry(){
+  const card = createCard('Step 5 · 从业者拷问（可选）', 'step5entry');
+  card.footerEl.innerHTML = '';
+  const b = document.createElement('button'); b.className = 'btn primary'; b.textContent = '进入从业者拷问';
+  b.onclick = ()=>{ card.footerEl.innerHTML = ''; enterStep5(); };
+  card.footerEl.appendChild(b);
+}
+
+/* ============================ 停止后立即诊断 ============================ */
+function triggerImmediateDiagnosis(){
+  const card = createCard('诊断（基于已生成内容）', 'diagnosis');
+  setCardStatus(card, '生成中…', true);
+  const diagPrompt = `【立即诊断指令】
+
+上面的对话是我们到目前为止生成的行业分析内容（可能不完整，某些步骤可能还没跑完）。
+
+现在请你切换角色：你是一位在这个行业干了 12 年的从业者。我是一个刚接触这个行业、读了一些资料就来找你聊的人。
+
+请立即跳出问答模式，直接给我一份诊断：
+
+1. **空栏清单**：这份报告里哪几栏其实是空的，只是看起来被填满了？逐条指出。
+2. **外行用语**：我哪几处用词暴露了我是外行？列出原句 + 内行会怎么说。
+3. **优先补哪 3 块**：如果我只能再补 3 块知识，应该补哪 3 块？为什么是这 3 块而不是别的？
+4. **你还不知道的 10 件事**：这份报告没有回答、但对判断这个行业很关键的事。不要客气，列出完整的 10 件。
+
+注意：
+- 基于已有内容诊断，没生成的步骤就标注「该步骤未完成，无法诊断」
+- 不要说"很好的问题"之类的话
+- 直接给结论，不要铺垫`;
+  (async()=>{
+    try{
+      await streamStep(card, diagPrompt, {});
+      setCardStatus(card, '完成', false);
+    }catch(e){
+      if(!state.aborted) setCardStatus(card, '出错：' + (e.message || e.toString()), false, true);
+    }
+  })();
+}
+
+/* ============================ Step 5 聊天模式 ============================ */
+function enterStep5(){
+  const card = createCard(STEP_DEFS.step5.title, 'step5');
+  card.isStep5 = true; card.turns = []; card.round = 0; card.diagnosed = false;
+  buildChatInput(card);
+  buildRoundControl(card);
+  (async()=>{
+    const myRun = state.runId;
+    try{
+      await streamStep(card, PROMPT_STEP5(), {skipUserTurnDisplay:true});
+      if(state.runId !== myRun) return;
+    }catch(e){ setupRetryStep5(card); }
+  })();
+}
+function buildChatInput(card){
+  const row = document.createElement('div'); row.className = 'chat-row';
+  const inp = document.createElement('input'); inp.type='text'; inp.className='chat-input';
+  inp.placeholder = '第 1 轮 · 输入你的回答…';
+  const send = document.createElement('button'); send.className='btn primary'; send.textContent='发送';
+  const doSend = ()=>{ const v=inp.value.trim(); if(!v) return; inp.value=''; chatSend(card, v); };
+  inp.onkeydown = (e)=>{ if(e.key==='Enter') doSend(); };
+  send.onclick = doSend;
+  row.appendChild(inp); row.appendChild(send);
+  card.footerEl.appendChild(row);
+  card.chatInput = inp;
+}
+function updateChatPlaceholder(card){
+  if(card.chatInput) card.chatInput.placeholder = card.diagnosed ? '对话已结束，已生成诊断' : '第 '+(card.round+1)+' 轮 · 输入你的回答…';
+}
+function buildRoundControl(card){
+  const row = document.createElement('div'); row.className='round-ctrl';
+  const lbl = document.createElement('span'); lbl.className='round-lbl'; lbl.textContent='目标轮数';
+  const inp = document.createElement('input'); inp.type='number'; inp.min='1'; inp.max='50';
+  inp.className='round-input'; inp.value = state.config.chatRounds||15;
+  const cur = document.createElement('span'); cur.className='round-cur';
+  card._refreshRound = ()=>{ cur.textContent = '· 当前第 '+(card.round||0)+' / '+(state.config.chatRounds||15)+' 轮'; };
+  inp.oninput = ()=>{
+    let v = parseInt(inp.value)||1; v = Math.max(1, Math.min(50, v));
+    state.config.chatRounds = v; saveConfig();
+    card._refreshRound();
+    // 实时调整：若目标轮数降到当前轮数及以下，且还没给诊断，立即结束
+    if(!card.diagnosed && (card.round||0) >= v) endStep5(card);
+  };
+  row.appendChild(lbl); row.appendChild(inp); row.appendChild(cur);
+  card.footerEl.insertBefore(row, card.footerEl.firstChild);
+  card.roundInput = inp; card._refreshRound();
+}
+async function chatSend(card, text){
+  if(state.aborted || card.diagnosed) return;
+  card._lastUser = text;
+  card.round = (card.round||0)+1;
+  updateChatPlaceholder(card);
+  if(card._refreshRound) card._refreshRound();
+  try{
+    await streamStep(card, text, {});
+    if(state.aborted) return;
+    // 每轮结束后检查是否达到目标轮数，达到则注入结束指令并输出诊断
+    if(!card.diagnosed && (card.round||0) >= (state.config.chatRounds||15)) endStep5(card);
+  }catch(e){ setupRetryStep5(card); }
+}
+async function endStep5(card){
+  if(card.diagnosed || state.aborted) return;
+  card.diagnosed = true;
+  // 结束指令必须自包含：诊断的完整要求直接写在这里，不依赖十几轮之前的初始 prompt（模型会忘）
+  const endCommand = `【请结束对话并给出诊断】
+
+现在立刻跳出从业者角色，基于上面这份报告和我们刚才的全部对话，输出一份完整诊断。
+必须包含以下四个部分，用 "### " 三级标题分节，缺一不可：
+
+### 一、空栏清单
+这份报告里哪几栏其实是空的，只是看起来被填满了？逐条指出，说明它为什么重要。
+
+### 二、外行用语
+我在对话中哪几处用词暴露了我是外行？每条给出：我的原句 + 内行会怎么说。
+
+### 三、优先补的 3 块知识
+如果我只能再补 3 块知识，应该补哪 3 块？为什么是这 3 块而不是别的？
+
+### 四、你还不知道的 10 件事
+这份报告没有回答、但对判断这个行业很关键的事。列满 10 条，一条都不要省，不要为了显得完整而缩短。
+
+除这四个部分外不要输出任何其他内容，不要再提问，直接输出诊断。`;
+  // 拷问卡片就地收尾：控制条+输入框停在对话末尾，诊断渲染到独立的新卡片（出现在拷问卡片之后）
+  if(card.chatInput) card.chatInput.disabled = true;
+  updateChatPlaceholder(card);
+  const diagCard = createCard('诊断报告（从业者视角）');
+  const runDiagnosis = async ()=>{
+    diagCard._stepAssistants = [];
+    diagCard.raw = '';
+    try{
+      await streamStep(diagCard, endCommand, {});
+      // 完整性校验：诊断内容过短视为失败，走重试
+      if(!diagCard.raw || diagCard.raw.trim().length < 80){
+        throw new Error('诊断内容为空或不完整');
+      }
+      setCardStatus(diagCard, '诊断已生成', false);
+    }catch(e){
+      if(state.aborted) return;
+      diagCard.footerEl.querySelector('.retry-btn')?.remove();
+      const b = document.createElement('button'); b.className='btn retry-btn'; b.textContent='重试诊断';
+      b.onclick = ()=>{ b.remove(); setCardStatus(diagCard, '生成中…', true); runDiagnosis(); };
+      diagCard.footerEl.appendChild(b);
+      diagCard.el.scrollIntoView({behavior:'smooth', block:'end'});
+    }
+  };
+  runDiagnosis();
+}
+function setupRetryStep5(card){
+  if(card.turns.length && card.turns[card.turns.length-1].role==='assistant') card.turns.pop();
+  if(card.turns.length && card.turns[card.turns.length-1].role==='user') card.turns.pop();
+  card.raw = renderChatRaw(card); renderCard(card);
+  card.footerEl.querySelector('.retry-btn')?.remove();
+  const b = document.createElement('button'); b.className='btn retry-btn'; b.textContent='重试发送';
+  b.onclick = ()=>{ b.remove(); chatSend(card, card._lastUser||''); };
+  card.footerEl.insertBefore(b, card.footerEl.firstChild);
+}
+
+/* ============================ 顶栏动作 ============================ */
+function resetAll(){
+  state.conversation = []; state.selectedChoice = '';
+  state.tokens = {input:0, output:0, cacheRead:0, cacheWrite:0};
+  state.webSearchDowngraded = false;
+  state.cards = {}; state.cardOrder = [];
+  document.getElementById('cards').innerHTML = '';
+  updateTokenDisplay();
+}
+function updateTokenDisplay(){
+  document.getElementById('tokenDisplay').textContent =
+    '输入 '+state.tokens.input.toLocaleString()+' · 输出 '+state.tokens.output.toLocaleString();
+}
+function updateStopButton(){
+  document.getElementById('stopBtn').disabled = !state.abortController || state.aborted;
+}
+async function startAnalysis(){
+  const industry = document.getElementById('industryInput').value.trim();
+  if(!industry){ alert('请输入行业名称'); return; }
+  if(!state.config.apiKey){ openSettings(); alert('请先在设置中填写 API Key'); return; }
+  state.industry = industry;
+  if(state.abortController) state.abortController.abort();
+  resetAll();
+  state.abortController = new AbortController();
+  state.aborted = false;
+  state.runId++;
+  updateStopButton();
+  const card = createCard(STEP_DEFS.step0.title, 'step0');
+  try{
+    await streamStep(card, PROMPT_STEP0(industry), {});
+    showSelectionControls(card, parseCandidates(card.raw));
+  }catch(e){
+    setupRetry(card, {key:'step0', content:()=>PROMPT_STEP0(industry)}, -1, null);
+  }
+}
+function exportMd(){
+  let md = '# 行业分析报告\n\n';
+  for(const id of state.cardOrder){
+    const c = state.cards[id];
+    if(!c) continue;
+    if(c.key === 'step5entry') continue;
+    md += '## '+c.title+'\n\n';
+    md += (getExportRaw(c)||'') + '\n\n';
+  }
+  const blob = new Blob([md], {type:'text/markdown;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '行业分析报告.md';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ============================ 设置面板 ============================ */
+function openSettings(){
+  document.getElementById('settings').classList.remove('hidden');
+}
+function toggleSettings(forceClose){
+  const s = document.getElementById('settings');
+  if(forceClose) s.classList.add('hidden');
+  else s.classList.toggle('hidden');
+}
+function readSettings(){
+  state.config.baseUrl = document.getElementById('cfgBaseUrl').value.trim() || 'https://api.anthropic.com';
+  state.config.apiKey = document.getElementById('cfgApiKey').value.trim();
+  state.config.model = document.getElementById('cfgModel').value.trim() || 'deepseek-v4-pro';
+  state.config.authMode = document.getElementById('cfgAuth').value;
+  state.config.webSearch = document.getElementById('cfgWeb').checked;
+  state.config.useProxy = document.getElementById('cfgProxy').checked;
+  state.config.chatRounds = Math.max(1, Math.min(50, parseInt(document.getElementById('cfgRounds').value)||15));
+  // 若正在聊天，同步卡片上的实时轮数控制条
+  for(const id of state.cardOrder){
+    const c = state.cards[id];
+    if(c && c.roundInput){ c.roundInput.value = state.config.chatRounds; if(c._refreshRound) c._refreshRound(); }
+  }
+}
+
+/* ============================ Toast ============================ */
+function showWarning(msg){
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(()=>t.classList.add('show'), 10);
+  setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(), 300); }, 4000);
+}
+
+/* ============================ 初始化 ============================ */
+document.addEventListener('DOMContentLoaded', ()=>{
+  loadConfig();
+  document.getElementById('cfgBaseUrl').value = state.config.baseUrl;
+  document.getElementById('cfgApiKey').value = state.config.apiKey;
+  document.getElementById('cfgModel').value = state.config.model;
+  document.getElementById('cfgAuth').value = state.config.authMode;
+  document.getElementById('cfgWeb').checked = state.config.webSearch;
+  document.getElementById('cfgProxy').checked = state.config.useProxy;
+  document.getElementById('cfgRounds').value = state.config.chatRounds || 15;
+  document.getElementById('startBtn').onclick = startAnalysis;
+  document.getElementById('industryInput').addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter'){ e.preventDefault(); startAnalysis(); }
+  });
+  document.getElementById('stopBtn').onclick = ()=>{
+    if(!state.abortController) return;
+    state.abortController.abort();
+    state.aborted = true;
+    updateStopButton();
+    // 如果已有会话内容，立即输出基于现有内容的诊断
+    if(state.conversation.length > 0){
+      triggerImmediateDiagnosis();
+    }
+  };
+  document.getElementById('exportBtn').onclick = exportMd;
+  document.getElementById('settingsBtn').onclick = ()=>toggleSettings();
+  document.getElementById('saveSettings').onclick = ()=>{ readSettings(); saveConfig(); toggleSettings(true); showWarning('设置已保存（仅在本地）'); };
+  document.getElementById('closeSettings').onclick = ()=>toggleSettings(true);
+  if(!state.config.apiKey) openSettings();
+});
+</script>
+</body>
+</html>
